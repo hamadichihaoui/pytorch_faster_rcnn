@@ -7,7 +7,7 @@ import torch
 
 class RoIPooling2D(nn.Module):
 
-    def __init__(self, spatial_scale, outh=7, outw=7):
+    def __init__(self, outh=7, outw=7):
         super(RoIPooling2D, self).__init__()
         self.outh = outh
         self.outw = outw
@@ -33,7 +33,7 @@ class RoIPooling2D(nn.Module):
 
         region = feature_map[h_start:h_end, w_start:w_end, :]
         region = self.adap_avg_pool(region)
-        return region # torch tensor
+        return region# torch tensor
 
     def forward(self, x, rois, spatial_scale):
         regions = []

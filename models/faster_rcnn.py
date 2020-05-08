@@ -7,15 +7,15 @@ from torch import nn
 
 class FasterRCNN(nn.Module):
 
-    def __init__(self, feature_extractor, rpn, roi_pooling):
+    def __init__(self, feature_extractor, rpn, head):
         super(FasterRCNN, self).__init__()
         self.feature_extractor = feature_extractor
         self. rpn = rpn
-        self.roi_pooling = roi_pooling
+        self.head = head
 
     def forward(self, x):
         feature_map = self.feature_extractor(x)
-        rpn_proposals, rpn_locs, rpn_scores = self.rpn(feature_map)
-        roi_locs, roi_scores = self.roi_pooling(feature_map, rpn_proposals)
+        rpn_objectness_scores, rpn_localization,  rois, roi_indices, anchors = self.rpn(feature_map)
+        roi_locs, roi_scores = self.head(feature_map, rois)
 
         return roi_locs, roi_scores
