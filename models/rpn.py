@@ -49,6 +49,10 @@ class RPN(nn.Module):
         if n_post_nms > 0:
             roi = roi[:n_post_nms]
 
+        # convert to relative dimensions
+        roi[:, slice(0, 4, 2)] /= img_size[0]
+        roi[:, slice(1, 4, 2)] /= img_size[1]
+
         return roi
 
     def _generate_proposals(self, localization_scores, rpn_fg_scores, anchors, img_size, n_post_nms=300):
