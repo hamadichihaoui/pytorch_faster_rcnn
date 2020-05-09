@@ -5,6 +5,29 @@ import numpy as np
 import cv2
 
 
+def bbox2loc(src_bbox, des_bbox):
+    """
+    :param src_bbox: #shape h * w * n_anchor, 4
+    :param locs: #shape  h * w * n_anchor, 4
+    """
+    src_h = src_bbox[:, 2] - src_bbox[:, 0]
+    src_w = src_bbox[:, 3] - src_bbox[:, 1]
+    des_h = src_bbox[:, 2] - des_bbox[:, 0]
+    des_w = src_bbox[:, 3] - des_bbox[:, 1]
+    eps = np.finfo(src_h.dtype).eps
+    src_h = np.maximum(src_h, eps)
+    src_w = np.maximum(src_w, eps)
+
+    dh = np.log(des_h / src_h)
+    dw = np.log(des_w / src_w)
+
+    dy = (des_bbox[:, 0] - src_bbox[:, 0]) / src_h
+    dx = (des_bbox[:, 1] - src_bbox[:, 1]) / src_w
+
+    loc = np.concatenate([dy, dx, dh, dw], axis=-1)
+
+    return loc
+
 def loc2bbox(src_bbox, locs):
     """
 
@@ -29,6 +52,31 @@ def loc2bbox(src_bbox, locs):
 
     dst_bbox = np.concatenate([ctr_y - 0.5 * h, ctr_x - 0.5 * w, ctr_y + 0.5 * h, ctr_x + 0.5 * w], axis=-1)
     return dst_bbox
+
+def iou(bboxes_a, bboxes_b):
+    # bboxes shape N1 * 4
+    # bboxes shape N2 * 4
+    min_y2 = np.minimum(bboxes_a[:, None, 2], bboxes_b[:, 2])
+    max_y1 = np.maximum(bboxes_a[:, None,  0], bboxes_b[:, 0])
+    min_x2 = np.minimum(bboxes_a[:, None,  3], bboxes_b[:, 3])
+    max_x1 = np.maximum(bboxes_a[:, None, 1], bboxes_b[:, 1]) # shape N1 * N2
+
+    intersection_y = np.maximum(min_y2 - max_y1, 0.) # shape N1 * N2
+    intersection_x = np.maximum(min_x2 - max_x1, 0.)
+    intersection_area = intersection_y * intersection_x # shape N1 * N2
+
+    area_a = (bboxes_a[:, 2] - bboxes_a[:, 0]) * (bboxes_a[:, 3] - bboxes_a[:, 1]) # shape N1
+    area_b = (bboxes_b[:, 2] - bboxes_b[:, 0]) * (bboxes_b[:, 3] - bboxes_b[:, 1]) # shape N2
+
+    # area_a_1 = np.prod(bboxes_a[:, 2:] - bboxes_a[:, :2], axis=1)
+    # area_b_1 = np.prod(bboxes_b[:, 2:] - bboxes_b[:, :2], axis=1)
+
+    sum_area = np.zeros((area_a.shape[0], area_b.shape[0]))
+    for i in range(area_a.shape[0]):
+        for j in range(area_b.shape[0]):
+            sum_area[i, j] = area_a[i] + area_b[j]
+    iou = intersection_area / (sum_area - intersection_area)
+    return iou
 
 
 def intersection_over_union(bbox_a, bboxes):
@@ -112,49 +160,53 @@ def generate_anchors(base_anchor, feat_width, feat_height, feat_stride):
     return anchors
 
 
-
 if __name__ == '__main__':
 
-    # Image name
-    image_name = '1_684.jpg'
+    bboxes_a = np.array([[20,20, 40,40], [40,40,60,60]])
+    bboxes_b = np.array([[30, 30, 50, 50], [50, 50, 70, 70]])
+    iou = iou(bboxes_a, bboxes_b)
 
-    # Bounding boxes
-    bounding_boxes = np.array([[187, 82, 337, 317], [150, 67, 305, 282], [246, 121, 368, 304], [200, 170, 400, 180]])
-    confidence_score = [0.9, 0.75, 0.8, 0.5]
 
-    # Read image
-    image = cv2.imread(image_name)
-
-    # Copy image as original
-    org = image.copy()
-
-    # Draw parameters
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    font_scale = 1
-    thickness = 2
-
-    # IoU threshold
-    threshold = 0.7
-
-    # Draw bounding boxes and confidence score
-    for (start_x, start_y, end_x, end_y), confidence in zip(bounding_boxes, confidence_score):
-        (w, h), baseline = cv2.getTextSize(str(confidence), font, font_scale, thickness)
-        cv2.rectangle(org, (start_x, start_y - (2 * baseline + 5)), (start_x + w, start_y), (0, 255, 255), -1)
-        cv2.rectangle(org, (start_x, start_y), (end_x, end_y), (0, 255, 255), 2)
-        cv2.putText(org, str(confidence), (start_x, start_y), font, font_scale, (0, 0, 0), thickness)
-
-    # Run non-max suppression algorithm
-    picked_boxes, picked_score = non_maximum_suppression(bounding_boxes,threshold, confidence_score)
-
-    # Draw bounding boxes and confidence score after non-maximum supression
-    for (start_x, start_y, end_x, end_y), confidence in zip(picked_boxes, picked_score):
-        (w, h), baseline = cv2.getTextSize(str(confidence), font, font_scale, thickness)
-        cv2.rectangle(image, (start_x, start_y - (2 * baseline + 5)), (start_x + w, start_y), (0, 255, 255), -1)
-        cv2.rectangle(image, (start_x, start_y), (end_x, end_y), (0, 255, 255), 2)
-        cv2.putText(image, str(confidence), (start_x, start_y), font, font_scale, (0, 0, 0), thickness)
-
-    # Show image
-    cv2.imshow('Original', org)
-    cv2.imshow('NMS', image)
-    cv2.waitKey(0)
+    # # Image name
+    # image_name = '1_684.jpg'
+    #
+    # # Bounding boxes
+    # bounding_boxes = np.array([[187, 82, 337, 317], [150, 67, 305, 282], [246, 121, 368, 304], [200, 170, 400, 180]])
+    # confidence_score = [0.9, 0.75, 0.8, 0.5]
+    #
+    # # Read image
+    # image = cv2.imread(image_name)
+    #
+    # # Copy image as original
+    # org = image.copy()
+    #
+    # # Draw parameters
+    # font = cv2.FONT_HERSHEY_SIMPLEX
+    # font_scale = 1
+    # thickness = 2
+    #
+    # # IoU threshold
+    # threshold = 0.7
+    #
+    # # Draw bounding boxes and confidence score
+    # for (start_x, start_y, end_x, end_y), confidence in zip(bounding_boxes, confidence_score):
+    #     (w, h), baseline = cv2.getTextSize(str(confidence), font, font_scale, thickness)
+    #     cv2.rectangle(org, (start_x, start_y - (2 * baseline + 5)), (start_x + w, start_y), (0, 255, 255), -1)
+    #     cv2.rectangle(org, (start_x, start_y), (end_x, end_y), (0, 255, 255), 2)
+    #     cv2.putText(org, str(confidence), (start_x, start_y), font, font_scale, (0, 0, 0), thickness)
+    #
+    # # Run non-max suppression algorithm
+    # picked_boxes, picked_score = non_maximum_suppression(bounding_boxes,threshold, confidence_score)
+    #
+    # # Draw bounding boxes and confidence score after non-maximum supression
+    # for (start_x, start_y, end_x, end_y), confidence in zip(picked_boxes, picked_score):
+    #     (w, h), baseline = cv2.getTextSize(str(confidence), font, font_scale, thickness)
+    #     cv2.rectangle(image, (start_x, start_y - (2 * baseline + 5)), (start_x + w, start_y), (0, 255, 255), -1)
+    #     cv2.rectangle(image, (start_x, start_y), (end_x, end_y), (0, 255, 255), 2)
+    #     cv2.putText(image, str(confidence), (start_x, start_y), font, font_scale, (0, 0, 0), thickness)
+    #
+    # # Show image
+    # cv2.imshow('Original', org)
+    # cv2.imshow('NMS', image)
+    # cv2.waitKey(0)
 
