@@ -69,7 +69,7 @@ class VOCBboxDataset:
         #             ' in addition to the above mentioned splits.'
         #         )
         id_list_file = os.path.join(
-            data_dir, 'ImageSets/Main/{0}.txt'.format(split))
+            data_dir, 'ImageSets\Main\{0}.txt'.format(split))
 
         self.ids = [id_.strip() for id_ in open(id_list_file)]
         self.data_dir = data_dir

@@ -14,7 +14,7 @@ class ProposalTargetCreator:
                  pos_ratio=0.25, num_classes=21):
         self.n_sample = n_sample
         self.pos_iou_thresh = pos_iou_thresh
-        self.neg_iou_thresh = neg_iou_thresh
+        #self.neg_iou_thresh = neg_iou_thresh
         self.pos_iou_thresh = pos_iou_thresh
         self.neg_iou_thresh_hi = neg_iou_thresh_hi
         self.neg_iou_thresh_lo = neg_iou_thresh_lo

@@ -116,7 +116,7 @@ class Dataset:
 
 
 class TestDataset:
-    def __init__(self, opt, split='test', use_difficult=True):
+    def __init__(self, opt, split='train', use_difficult=True):
         self.opt = opt
         self.db = VOCBboxDataset(opt.voc_data_dir, split=split, use_difficult=use_difficult)
 
@@ -127,3 +127,12 @@ class TestDataset:
 
     def __len__(self):
         return len(self.db)
+
+if __name__ == '__main__':
+    from utils.config import opt
+    test_dataset = TestDataset(opt)
+    img, ori_img_shape, bbox, label, difficult = test_dataset[1]
+    print('bbox: ', bbox)
+    print('labl ', label)
+    print('difficult: ', difficult)
+    print('ori_img_shape: ', ori_img_shape)

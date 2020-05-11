@@ -9,12 +9,14 @@ from models.rpn import RPN
 import numpy as np
 import torch
 
+
 class VGG_FasterRCNN(FasterRCNN):
     def __init__(self, n_classes, roi_size=7):
         self.feature_extractor = vgg_extractor()
         self.rpn = RPN()
         self.head = VGG16RoIHead(n_classes, roi_size)
         super(VGG_FasterRCNN, self).__init__(self.feature_extractor, self.rpn, self.head)
+
 
 
 class VGG16RoIHead(nn.Module):
